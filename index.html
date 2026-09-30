@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group G - AI Usage & Task Documentation Log</title>
+  
+  <!-- Firebase SDKs for Real-Time Collaborative Sync -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #37352f;
+      --border: #e9e9e7;
+      --header-bg: #f7f6f3;
+      --hover-bg: #f1f0ec;
+      
+      /* Group G Member Colors */
+      --hugo-color: #2563eb;
+      --fan-color: #059669;
+      --federico-color: #7c3aed;
+      --lara-color: #d97706;
+      --alessandro-color: #db2777;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Header Bar */
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 12px; }
+    .header-title h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #111; }
+    .header-title p { margin: 4px 0 0 0; font-size: 0.8rem; color: #666; display: flex; align-items: center; gap: 6px;}
+
+    /* Connection Status Indicator */
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; display: inline-block; }
+    .status-dot.active { background: #10b981; }
+
+    .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--header-bg); color: #37352f; }
+    .btn-secondary:hover { background: var(--hover-bg); }
+    .btn-success { background: #059669; color: white; border-color: #059669; }
+    .btn-success:hover { opacity: 0.9; }
+
+    /* Data Table Styling */
+    .table-wrapper { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+    th { background: var(--header-bg); padding: 12px 10px; font-weight: 700; color: #555; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: top; word-break: break-word; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* Member Badge Indicator */
+    .member-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: white; }
+    .avatar-dot { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: white; font-weight: bold; }
+
+    /* Action Buttons inside Table */
+    .btn-danger { color: #dc2626; border: none; background: none; font-weight: bold; cursor: pointer; padding: 2px 6px; }
+    .btn-danger:hover { text-decoration: underline; }
+
+    /* Modal Form Styling */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+    .modal { background: white; padding: 24px; border-radius: 8px; width: 100%; max-width: 520px; border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .modal h3 { margin-top: 0; font-size: 1.1rem; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: #444; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.85rem; font-family: inherit; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+    @media print {
+      .action-btns, .btn-danger, .header-bar p { display: none !important; }
+      body { padding: 0; }
+      .table-wrapper { border: none; }
+      th, td { border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header Bar -->
+  <div class="header-bar">
+    <div class="header-title">
+      <h2>🤖 Group G — Realtime AI Usage Log</h2>
+      <p><span class="status-dot" id="statusDot"></span> <span id="statusText">Connecting to database...</span></p>
+    </div>
+    <div class="action-btns">
+      <button class="btn-primary" onclick="openModal()">+ Add Entry</button>
+      <button class="btn-success" onclick="exportCSV()">📥 Download CSV</button>
+      <button class="btn-secondary" onclick="window.print()">🖨️ Print / Save PDF</button>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 140px;">Recorded By</th>
+          <th style="width: 150px;">AI-based Tool</th>
+          <th style="width: 220px;">Use Case</th>
+          <th style="width: 180px;">Scope</th>
+          <th>Remarks</th>
+          <th style="width: 60px; text-align: center;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="logTableBody">
+        <!-- Live Synchronized Rows Render Here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Form -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <h3>Record Entry</h3>
+    
+    <div class="form-group">
+      <label>Recorded By (Group Member):</label>
+      <select id="entryAuthor">
+        <option value="Hugo">Hugo</option>
+        <option value="Fan">Fan</option>
+        <option value="Federico">Federico</option>
+        <option value="Lara">Lara</option>
+        <option value="Alessandro">Alessandro</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>AI-based Tool:</label>
+      <input type="text" id="entryTool" placeholder="e.g., ChatGPT-4o, Midjourney v6, Claude 3.5 Sonnet">
+    </div>
+
+    <div class="form-group">
+      <label>Use Case:</label>
+      <input type="text" id="entryUseCase" placeholder="e.g., Generating GIS Python script, drafting presentation text">
+    </div>
+
+    <div class="form-group">
+      <label>Scope:</label>
+      <input type="text" id="entryScope" placeholder="e.g., Winterthur Töss spatial map, Section 2.1 report">
+    </div>
+
+    <div class="form-group">
+      <label>Remarks & Verification Notes:</label>
+      <textarea id="entryRemarks" placeholder="e.g., Prompt adjusted for accuracy. Data manually cross-referenced with official statistics."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Direct Firebase Database URL Binding
+  const FIREBASE_DB_URL = "https://ipa26-25f4a-default-rtdb.europe-west1.firebasedatabase.app/"; 
+
+  const memberColors = {
+    "Hugo": "var(--hugo-color)",
+    "Fan": "var(--fan-color)",
+    "Federico": "var(--federico-color)",
+    "Lara": "var(--lara-color)",
+    "Alessandro": "var(--alessandro-color)"
+  };
+
+  let logs = [];
+
+  // Initialize Firebase Connection
+  firebase.initializeApp({ databaseURL: FIREBASE_DB_URL });
+  const dbRef = firebase.database().ref('group_g_ai_log');
+
+  // Real-time Database Event Listener
+  dbRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    logs = [];
+    if (data) {
+      Object.keys(data).forEach(key => {
+        logs.push({ id: key, ...data[key] });
+      });
+    }
+    document.getElementById('statusDot').classList.add('active');
+    document.getElementById('statusText').innerText = 'Live Real-Time Sync Active (Group G Shared)';
+    renderTable();
+  }, (error) => {
+    document.getElementById('statusText').innerText = 'Connection Error: Check Firebase Access Rules';
+  });
+
+  function renderTable() {
+    const tbody = document.getElementById('logTableBody');
+    tbody.innerHTML = '';
+
+    if (logs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888; padding:20px;">No entries recorded yet. Click <b>+ Add Entry</b> to log AI usage.</td></tr>`;
+      return;
+    }
+
+    logs.forEach(item => {
+      const row = document.createElement('tr');
+      const color = memberColors[item.author] || '#555';
+
+      row.innerHTML = `
+        <td>
+          <div class="member-badge" style="background:${color};">
+            <span class="avatar-dot" style="background: rgba(255,255,255,0.3);">${item.author ? item.author.charAt(0) : '?'}</span>
+            ${item.author}
+          </div>
+        </td>
+        <td><strong>${escapeHtml(item.tool)}</strong></td>
+        <td>${escapeHtml(item.useCase)}</td>
+        <td>${escapeHtml(item.scope)}</td>
+        <td style="color:#555;">${escapeHtml(item.remarks)}</td>
+        <td style="text-align:center;">
+          <button class="btn-danger" onclick="deleteEntry('${item.id}')" title="Delete row">×</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function openModal() {
+    document.getElementById('entryTool').value = '';
+    document.getElementById('entryUseCase').value = '';
+    document.getElementById('entryScope').value = '';
+    document.getElementById('entryRemarks').value = '';
+    document.getElementById('entryModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('entryModal').style.display = 'none';
+  }
+
+  function saveEntry() {
+    const author = document.getElementById('entryAuthor').value;
+    const tool = document.getElementById('entryTool').value.trim();
+    const useCase = document.getElementById('entryUseCase').value.trim();
+    const scope = document.getElementById('entryScope').value.trim();
+    const remarks = document.getElementById('entryRemarks').value.trim();
+
+    if (!tool || !useCase) {
+      alert('Please fill out at least the "AI-based Tool" and "Use Case" fields.');
+      return;
+    }
+
+    // Push new record directly to shared Firebase cloud database
+    dbRef.push({
+      author,
+      tool,
+      useCase,
+      scope,
+      remarks,
+      timestamp: Date.now()
+    });
+
+    closeModal();
+  }
+
+  function deleteEntry(id) {
+    if (confirm("Are you sure you want to delete this log entry?")) {
+      dbRef.child(id).remove();
+    }
+  }
+
+  function exportCSV() {
+    if (logs.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Recorded By,AI-based Tool,Use Case,Scope,Remarks\n";
+
+    logs.forEach(row => {
+      const line = [
+        `"${(row.author || '').replace(/"/g, '""')}"`,
+        `"${(row.tool || '').replace(/"/g, '""')}"`,
+        `"${(row.useCase || '').replace(/"/g, '""')}"`,
+        `"${(row.scope || '').replace(/"/g, '""')}"`,
+        `"${(row.remarks || '').replace(/"/g, '""')}"`
+      ].join(",");
+      csvContent += line + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Group_G_AI_Usage_Log.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+</script>
+
+</body>
+</html>
