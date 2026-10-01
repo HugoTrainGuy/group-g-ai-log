@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPA26 Project Dashboard & Task Manager</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #37352f;
+      --border: #e9e9e7;
+      --header-bg: #f7f6f3;
+      --hover-bg: #f1f0ec;
+      
+      /* Member Colors */
+      --hugo-color: #2563eb;
+      --fan-color: #059669;
+      --federico-color: #7c3aed;
+      --lara-color: #d97706;
+      --alessandro-color: #db2777;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); }
+    .container { max-width: 1250px; margin: 0 auto; }
+
+    /* Top Dashboard Navigation Switcher */
+    .view-switcher { display: flex; gap: 10px; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+    .view-btn { padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer; border: 1px solid var(--border); background: var(--header-bg); color: #555; transition: all 0.2s; }
+    .view-btn.active { background: #37352f; color: white; border-color: #37352f; }
+
+    /* Buttons */
+    button.btn-primary { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: opacity 0.2s; }
+    button.btn-primary:hover { opacity: 0.9; }
+
+    /* ================= OVERVIEW DASHBOARD LAYOUT ================= */
+    .overview-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+    @media (max-width: 850px) { .overview-grid { grid-template-columns: 1fr; } }
+
+    .dash-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+    .dash-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .dash-card-header h3 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; }
+
+    /* Ongoing Tasks List in Overview */
+    .ongoing-task-list { display: flex; flex-direction: column; gap: 10px; max-height: 540px; overflow-y: auto; padding-right: 4px; }
+    .summary-task-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--header-bg); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .summary-task-info { display: flex; flex-direction: column; gap: 4px; }
+    .summary-task-title { font-size: 0.85rem; font-weight: 600; }
+    
+    /* Mini Calendar Controls & Styling */
+    .cal-controls { display: flex; align-items: center; gap: 6px; }
+    .cal-nav-btn { background: var(--header-bg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; padding: 2px 8px; font-weight: bold; color: #555; transition: background 0.15s; }
+    .cal-nav-btn:hover { background: var(--hover-bg); }
+
+    .mini-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 3px; font-size: 0.75rem; }
+    .mini-day-name { font-weight: 700; padding: 4px 0; color: #888; background: var(--header-bg); border-radius: 4px; }
+    
+    .mini-day-cell { height: 42px; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 3px 2px; cursor: pointer; background: white; transition: all 0.15s; }
+    .mini-day-cell:hover { background: var(--hover-bg); }
+    .mini-day-cell.other-month { opacity: 0.3; background: #fafafa; }
+    .mini-day-cell.today { font-weight: bold; color: #2563eb; }
+    .mini-day-cell.selected { border: 2px solid #2563eb !important; background: #eff6ff !important; }
+
+    /* Multiple Task Marker Dots Container */
+    .dots-wrapper { display: flex; gap: 2px; justify-content: center; align-items: center; flex-wrap: wrap; max-width: 100%; min-height: 8px; }
+    .deadline-dot { width: 5px; height: 5px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
+
+    /* Deadlines List underneath Mini Calendar */
+    .deadlines-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+    .deadline-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; padding: 8px 10px; border-radius: 6px; background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+
+    /* ================= DETAILED TASK BOARD LAYOUT ================= */
+    .phase-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .phase-tab { padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; background: var(--header-bg); border: 1px solid var(--border); color: #666; transition: all 0.2s; }
+    .phase-tab:hover { background: var(--hover-bg); }
+    .phase-tab.active { background: #37352f; color: white; border-color: #37352f; }
+
+    .board-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; min-height: 350px; }
+    @media (max-width: 800px) { .board-grid { grid-template-columns: 1fr; } }
+
+    .column { background: var(--header-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; }
+    .column-header { font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; color: #555; }
+    .count-badge { background: #e0e0dc; padding: 2px 6px; border-radius: 10px; font-size: 0.75rem; }
+    .task-list { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+
+    /* Task Card */
+    .task-card { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: grab; transition: transform 0.15s; }
+    .task-card:hover { box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+    .phase-badge { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #f3f4f6; color: #4b5563; margin-bottom: 6px; }
+    .task-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; word-break: break-word; }
+    
+    .card-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.75rem; }
+    .priority-badge { font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; }
+    .priority-High { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .priority-Medium { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+    .priority-Low { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+
+    .assignees { display: flex; gap: 3px; }
+    .avatar { width: 20px; height: 20px; border-radius: 50%; color: white; font-size: 0.65rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+
+    .due-date { font-size: 0.7rem; color: #666; margin-top: 6px; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 6px; border-top: 1px solid #f1f1f1; }
+    .status-select { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--border); }
+    .delete-btn { color: #dc2626; cursor: pointer; font-size: 0.8rem; font-weight: bold; border: none; background: none; }
+
+    /* Comments Section */
+    .comments-section { background: var(--header-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-top: 20px; }
+    .comments-section h3 { margin-top: 0; font-size: 1rem; margin-bottom: 12px; }
+    .comment-list { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; margin-bottom: 12px; }
+    .comment-item { background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.8rem; }
+    .comment-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; font-size: 0.75rem; color: #555; }
+    .comment-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    .comment-form select, .comment-form input { padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border); font-size: 0.8rem; }
+    .comment-form input { flex-grow: 1; }
+
+    /* Modal Form Styling */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+    .modal { background: white; padding: 20px; border-radius: 8px; width: 100%; max-width: 480px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .modal h3 { margin-top: 0; font-size: 1.1rem; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border); font-size: 0.85rem; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.8rem; }
+    .checkbox-group label { display: flex; align-items: center; gap: 4px; font-weight: normal; cursor: pointer; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- View Navigation Switcher -->
+  <div class="view-switcher">
+    <div class="view-btn active" id="btnOverview" onclick="switchView('overview')">📌 Executive Dashboard & Deadlines</div>
+    <div class="view-btn" id="btnBoard" onclick="switchView('board')">📋 Detailed Task Board</div>
+  </div>
+
+  <!-- ================= VIEW 1: OVERVIEW DASHBOARD ================= -->
+  <div id="overviewView">
+    <div class="overview-grid">
+      <!-- Left Column: Priority & Deadline Ranked Tasks Summary -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3>🚀 Relevant Active Tasks (Ranked)</h3>
+          <button class="btn-primary" onclick="openTaskModal()">+ Add Task</button>
+        </div>
+        <div class="ongoing-task-list" id="overviewTaskList"></div>
+      </div>
+
+      <!-- Right Column: Interactive Mini Calendar & Selected Day Deadlines -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3>📅 Calendar Deadlines</h3>
+          <div class="cal-controls">
+            <button class="cal-nav-btn" onclick="changeCalendarMonth(-1)">&lt;</button>
+            <span id="miniCalMonthLabel" style="font-size: 0.8rem; font-weight: 600; color: #444;"></span>
+            <button class="cal-nav-btn" onclick="changeCalendarMonth(1)">&gt;</button>
+          </div>
+        </div>
+        
+        <!-- Mini Calendar Grid -->
+        <div class="mini-cal-grid">
+          <div class="mini-day-name">M</div><div class="mini-day-name">T</div>
+          <div class="mini-day-name">W</div><div class="mini-day-name">T</div>
+          <div class="mini-day-name">F</div><div class="mini-day-name">S</div>
+          <div class="mini-day-name">S</div>
+        </div>
+        <div class="mini-cal-grid" id="miniCalDays" style="margin-top: 4px;"></div>
+
+        <!-- Filtered Tasks for Selected Date -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 8px;">
+          <h4 style="margin: 0; font-size: 0.85rem;" id="selectedDateTitle">Tasks Due on Selected Day:</h4>
+          <span style="font-size: 0.7rem; color: #2563eb; cursor: pointer; text-decoration: underline;" onclick="clearSelectedDate()">View All Upcoming</span>
+        </div>
+        <div class="deadlines-list" id="overviewDeadlinesList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VIEW 2: FULL TASK BOARD ================= -->
+  <div id="boardView" style="display: none;">
+    <!-- 9 Phase Filter Tabs -->
+    <div class="phase-tabs">
+      <div class="phase-tab active" data-phase="All" onclick="setPhaseFilter('All')">All Tasks</div>
+      <div class="phase-tab" data-phase="Situation Assessment" onclick="setPhaseFilter('Situation Assessment')">1. Situation Assessment</div>
+      <div class="phase-tab" data-phase="Development Strategy" onclick="setPhaseFilter('Development Strategy')">2. Development Strategy</div>
+      <div class="phase-tab" data-phase="Focus Phase" onclick="setPhaseFilter('Focus Phase')">3. Focus Phase</div>
+      <div class="phase-tab" data-phase="Reflection and Recommendations" onclick="setPhaseFilter('Reflection and Recommendations')">4. Reflection & Recs</div>
+      <div class="phase-tab" data-phase="Presentations" onclick="setPhaseFilter('Presentations')">5. Presentations</div>
+      <div class="phase-tab" data-phase="Posters" onclick="setPhaseFilter('Posters')">6. Posters</div>
+      <div class="phase-tab" data-phase="Final Reports" onclick="setPhaseFilter('Final Reports')">7. Final Reports</div>
+      <div class="phase-tab" data-phase="Administration" onclick="setPhaseFilter('Administration')">8. Administration</div>
+      <div class="phase-tab" data-phase="Other" onclick="setPhaseFilter('Other')">9. Other</div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <span id="currentPhaseLabel" style="font-size: 0.85rem; font-weight: 600; color: #666;">Showing: All Phases</span>
+      <button class="btn-primary" onclick="openTaskModal()">+ Add New Task</button>
+    </div>
+
+    <!-- Kanban Grid -->
+    <div class="board-grid">
+      <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'No Status')">
+        <div class="column-header">
+          <span>⚪ No Status</span><span class="count-badge" id="count-No Status">0</span>
+        </div>
+        <div class="task-list" id="col-No Status"></div>
+      </div>
+
+      <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'To-Do')">
+        <div class="column-header">
+          <span>🟡 To-Do</span><span class="count-badge" id="count-To-Do">0</span>
+        </div>
+        <div class="task-list" id="col-To-Do"></div>
+      </div>
+
+      <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'In Progress')">
+        <div class="column-header">
+          <span>🔵 In Progress</span><span class="count-badge" id="count-In Progress">0</span>
+        </div>
+        <div class="task-list" id="col-In Progress"></div>
+      </div>
+
+      <div class="column" ondragover="allowDrop(event)" ondrop="drop(event, 'Completed')">
+        <div class="column-header">
+          <span>🟢 Completed</span><span class="count-badge" id="count-Completed">0</span>
+        </div>
+        <div class="task-list" id="col-Completed"></div>
+      </div>
+    </div>
+
+    <!-- Board Discussions & Comments -->
+    <div class="comments-section">
+      <h3>💬 Board Discussion & Notes</h3>
+      <div class="comment-list" id="commentList"></div>
+      <div class="comment-form">
+        <select id="commentAuthor">
+          <option value="Hugo">Hugo</option>
+          <option value="Fan">Fan</option>
+          <option value="Federico">Federico</option>
+          <option value="Lara">Lara</option>
+          <option value="Alessandro">Alessandro</option>
+        </select>
+        <input type="text" id="commentText" placeholder="Write a message or note about tasks...">
+        <button class="btn-primary" onclick="addComment()">Post Note</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Creation Modal -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <h3>Add Project Task</h3>
+    <div class="form-group">
+      <label>Task Title:</label>
+      <input type="text" id="taskTitle" placeholder="e.g., Prepare Winterthur Final Presentation Deck">
+    </div>
+    <div class="form-group">
+      <label>Project Phase (9 Groups):</label>
+      <select id="taskPhase">
+        <option value="Situation Assessment">Situation Assessment</option>
+        <option value="Development Strategy">Development Strategy</option>
+        <option value="Focus Phase">Focus Phase</option>
+        <option value="Reflection and Recommendations">Reflection and Recommendations</option>
+        <option value="Presentations">Presentations</option>
+        <option value="Posters">Posters</option>
+        <option value="Final Reports">Final Reports</option>
+        <option value="Administration">Administration</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Assign To (Select Members):</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="assignee" value="Hugo"> Hugo</label>
+        <label><input type="checkbox" name="assignee" value="Fan"> Fan</label>
+        <label><input type="checkbox" name="assignee" value="Federico"> Federico</label>
+        <label><input type="checkbox" name="assignee" value="Lara"> Lara</label>
+        <label><input type="checkbox" name="assignee" value="Alessandro"> Alessandro</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Priority Level:</label>
+      <select id="taskPriority">
+        <option value="Low">Low</option>
+        <option value="Medium" selected>Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Initial Status:</label>
+      <select id="taskStatus">
+        <option value="No Status">No Status</option>
+        <option value="To-Do" selected>To-Do</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Due Date:</label>
+      <input type="date" id="taskDueDate">
+    </div>
+    <div class="modal-actions">
+      <button style="background:#e0e0e0; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;" onclick="closeTaskModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveTask()">Create Task</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const memberColors = {
+    "Hugo": "var(--hugo-color)",
+    "Fan": "var(--fan-color)",
+    "Federico": "var(--federico-color)",
+    "Lara": "var(--lara-color)",
+    "Alessandro": "var(--alessandro-color)"
+  };
+
+  const priorityWeights = { "High": 3, "Medium": 2, "Low": 1 };
+  const statuses = ["No Status", "To-Do", "In Progress", "Completed"];
+  let activePhaseFilter = "All";
+  
+  let calDate = new Date();
+  let selectedCalDateStr = null; // Currently clicked date in calendar
+
+  let tasks = JSON.parse(localStorage.getItem('ipa26_board_tasks')) || [
+    { id: 1, title: "Winterthur GIS map spatial zoning", phase: "Situation Assessment", members: ["Hugo", "Fan"], priority: "High", status: "In Progress", dueDate: "2026-10-12" },
+    { id: 2, title: "Drafting Midterm Presentation slides", phase: "Presentations", members: ["Federico", "Lara", "Hugo"], priority: "High", status: "To-Do", dueDate: "2026-10-12" },
+    { id: 3, title: "Winterthur urban density analysis poster", phase: "Posters", members: ["Alessandro"], priority: "Medium", status: "To-Do", dueDate: "2026-11-05" },
+    { id: 4, title: "University budget & administration filing", phase: "Administration", members: ["Lara"], priority: "Low", status: "In Progress", dueDate: "2026-12-01" }
+  ];
+
+  let comments = JSON.parse(localStorage.getItem('ipa26_board_comments')) || [
+    { id: 1, author: "Lara", text: "Added task ranking algorithms and date-filtered calendar views!", time: "Sep 20, 16:30" }
+  ];
+
+  function init() {
+    renderOverview();
+    renderBoard();
+    renderComments();
+  }
+
+  function switchView(view) {
+    if (view === 'overview') {
+      document.getElementById('overviewView').style.display = 'block';
+      document.getElementById('boardView').style.display = 'none';
+      document.getElementById('btnOverview').classList.add('active');
+      document.getElementById('btnBoard').classList.remove('active');
+      renderOverview();
+    } else {
+      document.getElementById('overviewView').style.display = 'none';
+      document.getElementById('boardView').style.display = 'block';
+      document.getElementById('btnOverview').classList.remove('active');
+      document.getElementById('btnBoard').classList.add('active');
+      renderBoard();
+    }
+  }
+
+  /* ================= OVERVIEW RENDERING ================= */
+  function renderOverview() {
+    // 1. Filter and Rank Active Tasks for Left Side
+    const overviewList = document.getElementById('overviewTaskList');
+    overviewList.innerHTML = '';
+
+    const activeTasks = tasks.filter(t => t.status !== 'Completed');
+
+    // Multi-criteria sorting logic:
+    // 1. Shortest time to deadline (closest due date first, tasks without deadlines last)
+    // 2. Number of group members assigned (more members higher rank)
+    // 3. Priority assignment (High > Medium > Low)
+    activeTasks.sort((a, b) => {
+      // 1. Deadline comparison
+      if (a.dueDate && b.dueDate) {
+        if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+      } else if (a.dueDate && !b.dueDate) {
+        return -1;
+      } else if (!a.dueDate && b.dueDate) {
+        return 1;
+      }
+
+      // 2. Member count comparison
+      const aMembers = a.members ? a.members.length : 0;
+      const bMembers = b.members ? b.members.length : 0;
+      if (bMembers !== aMembers) return bMembers - aMembers;
+
+      // 3. Priority weight comparison
+      const aPrio = priorityWeights[a.priority] || 0;
+      const bPrio = priorityWeights[b.priority] || 0;
+      return bPrio - aPrio;
+    });
+    
+    if (activeTasks.length === 0) {
+      overviewList.innerHTML = `<div style="font-size:0.8rem; color:#888;">No active tasks found. All caught up!</div>`;
+    } else {
+      activeTasks.forEach((t, index) => {
+        const avatars = t.members.map(m => `<div class="avatar" style="background:${memberColors[m]||'#666'}" title="${m}">${m.charAt(0)}</div>`).join('');
+        const item = document.createElement('div');
+        item.className = 'summary-task-card';
+        item.innerHTML = `
+          <div class="summary-task-info">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:0.7rem; font-weight:800; color:#888;">#${index + 1}</span>
+              <span class="phase-badge">${t.phase}</span>
+            </div>
+            <span class="summary-task-title">${t.title}</span>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:2px;">
+              <span class="priority-badge priority-${t.priority}">${t.priority}</span>
+              <span style="font-size:0.7rem; color:#666;">Status: <b>${t.status}</b></span>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+            <div class="assignees">${avatars}</div>
+            ${t.dueDate ? `<span style="font-size:0.7rem; color:#dc2626; font-weight:600;">📅 ${t.dueDate}</span>` : '<span style="font-size:0.65rem; color:#aaa;">No Due Date</span>'}
+          </div>
+        `;
+        overviewList.appendChild(item);
+      });
+    }
+
+    // 2. Render Mini Calendar
+    renderMiniCalendar();
+  }
+
+  function changeCalendarMonth(delta) {
+    calDate.setMonth(calDate.getMonth() + delta);
+    renderMiniCalendar();
+  }
+
+  function selectCalDate(dateStr) {
+    if (selectedCalDateStr === dateStr) {
+      selectedCalDateStr = null; // Toggle unselect
+    } else {
+      selectedCalDateStr = dateStr;
+    }
+    renderMiniCalendar();
+  }
+
+  function clearSelectedDate() {
+    selectedCalDateStr = null;
+    renderMiniCalendar();
+  }
+
+  function renderMiniCalendar() {
+    const year = calDate.getFullYear();
+    const month = calDate.getMonth();
+
+    document.getElementById('miniCalMonthLabel').textContent = 
+      new Date(year, month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+    const grid = document.getElementById('miniCalDays');
+    grid.innerHTML = '';
+
+    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Previous month padding
+    for (let i = firstDayIndex; i > 0; i--) {
+      const cell = document.createElement('div');
+      cell.className = 'mini-day-cell other-month';
+      cell.innerHTML = `<span>${prevMonthDays - i + 1}</span>`;
+      grid.appendChild(cell);
+    }
+
+    // Current month days
+    for (let day = 1; day <= totalDays; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const cell = document.createElement('div');
+      
+      const isToday = dateStr === todayStr;
+      const isSelected = dateStr === selectedCalDateStr;
+      
+      cell.className = `mini-day-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`;
+      cell.onclick = () => selectCalDate(dateStr);
+
+      // Count tasks for multiple markers
+      const dayTaskCount = tasks.filter(t => t.dueDate === dateStr).length;
+
+      let dotsHtml = '';
+      if (dayTaskCount > 0) {
+        // Generate a dot for each task due on this day
+        const dots = Array(dayTaskCount).fill('<div class="deadline-dot" title="Task Due"></div>').join('');
+        dotsHtml = `<div class="dots-wrapper">${dots}</div>`;
+      } else {
+        dotsHtml = `<div class="dots-wrapper"></div>`;
+      }
+
+      cell.innerHTML = `
+        <span>${day}</span>
+        ${dotsHtml}
+      `;
+      grid.appendChild(cell);
+    }
+
+    // 3. Render Filtered Tasks List underneath Calendar
+    const deadlineListEl = document.getElementById('overviewDeadlinesList');
+    const titleEl = document.getElementById('selectedDateTitle');
+    deadlineListEl.innerHTML = '';
+
+    let displayTasks = [];
+
+    if (selectedCalDateStr) {
+      titleEl.textContent = `Tasks Due on ${selectedCalDateStr}:`;
+      displayTasks = tasks.filter(t => t.dueDate === selectedCalDateStr);
+    } else {
+      titleEl.textContent = `Upcoming Scheduled Deadlines:`;
+      displayTasks = tasks.filter(t => t.dueDate).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+    }
+
+    if (displayTasks.length === 0) {
+      deadlineListEl.innerHTML = `<div style="font-size:0.75rem; color:#888; padding:8px 0;">No tasks found for this selection.</div>`;
+    } else {
+      displayTasks.forEach(t => {
+        const assignees = t.members.join(', ') || 'Unassigned';
+        const item = document.createElement('div');
+        item.className = 'deadline-item';
+        item.innerHTML = `
+          <div>
+            <strong>${t.title}</strong>
+            <div style="font-size:0.68rem; color:#7f1d1d; margin-top:2px;">Phase: ${t.phase} | Assigned: ${assignees}</div>
+          </div>
+          <span style="font-weight:700;">${t.dueDate}</span>
+        `;
+        deadlineListEl.appendChild(item);
+      });
+    }
+  }
+
+  /* ================= BOARD RENDERING ================= */
+  function setPhaseFilter(phase) {
+    activePhaseFilter = phase;
+    document.querySelectorAll('.phase-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.getAttribute('data-phase') === phase);
+    });
+    document.getElementById('currentPhaseLabel').textContent = phase === 'All' ? 'Showing: All Phases' : `Showing: ${phase}`;
+    renderBoard();
+  }
+
+  function renderBoard() {
+    statuses.forEach(s => {
+      document.getElementById(`col-${s}`).innerHTML = '';
+      document.getElementById(`count-${s}`).textContent = '0';
+    });
+
+    const filteredTasks = activePhaseFilter === "All" ? tasks : tasks.filter(t => t.phase === activePhaseFilter);
+
+    statuses.forEach(status => {
+      const colTasks = filteredTasks.filter(t => t.status === status);
+      document.getElementById(`count-${status}`).textContent = colTasks.length;
+
+      const colEl = document.getElementById(`col-${status}`);
+      colTasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.draggable = true;
+        card.ondragstart = (e) => drag(e, task.id);
+
+        const avatarsHtml = task.members.map(m => 
+          `<div class="avatar" style="background:${memberColors[m] || '#666'}" title="${m}">${m.charAt(0)}</div>`
+        ).join('');
+
+        card.innerHTML = `
+          <span class="phase-badge">${task.phase}</span>
+          <div class="task-title">${task.title}</div>
+          <div class="card-meta">
+            <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+            <div class="assignees">${avatarsHtml}</div>
+          </div>
+          ${task.dueDate ? `<div class="due-date">📅 Due: ${task.dueDate}</div>` : ''}
+          <div class="card-footer">
+            <select class="status-select" onchange="updateTaskStatus(${task.id}, this.value)">
+              ${statuses.map(s => `<option value="${s}" ${s === task.status ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+            <button class="delete-btn" onclick="deleteTask(${task.id})">×</button>
+          </div>
+        `;
+
+        colEl.appendChild(card);
+      });
+    });
+  }
+
+  /* Drag & Drop */
+  function drag(e, id) { e.dataTransfer.setData("text/plain", id); }
+  function allowDrop(e) { e.preventDefault(); }
+  function drop(e, newStatus) {
+    e.preventDefault();
+    const taskId = parseInt(e.dataTransfer.getData("text/plain"));
+    updateTaskStatus(taskId, newStatus);
+  }
+
+  function updateTaskStatus(id, newStatus) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.status = newStatus;
+      saveAndRefresh();
+    }
+  }
+
+  /* Modal Functions */
+  function openTaskModal() { document.getElementById('taskModal').style.display = 'flex'; }
+  function closeTaskModal() {
+    document.getElementById('taskModal').style.display = 'none';
+    document.getElementById('taskTitle').value = '';
+    document.querySelectorAll('input[name="assignee"]').forEach(cb => cb.checked = false);
+  }
+
+  function saveTask() {
+    const title = document.getElementById('taskTitle').value.trim();
+    if (!title) { alert("Please enter a task title."); return; }
+
+    const selectedMembers = Array.from(document.querySelectorAll('input[name="assignee"]:checked')).map(cb => cb.value);
+
+    const newTask = {
+      id: Date.now(),
+      title: title,
+      phase: document.getElementById('taskPhase').value,
+      members: selectedMembers,
+      priority: document.getElementById('taskPriority').value,
+      status: document.getElementById('taskStatus').value,
+      dueDate: document.getElementById('taskDueDate').value
+    };
+
+    tasks.push(newTask);
+    saveAndRefresh();
+    closeTaskModal();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveAndRefresh();
+  }
+
+  /* Comments logic */
+  function renderComments() {
+    const listEl = document.getElementById('commentList');
+    listEl.innerHTML = '';
+    comments.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+      item.innerHTML = `
+        <div class="comment-header">
+          <span style="color:${memberColors[c.author] || '#333'}">${c.author}</span>
+          <span>${c.time}</span>
+        </div>
+        <div>${c.text}</div>
+      `;
+      listEl.appendChild(item);
+    });
+  }
+
+  function addComment() {
+    const textInput = document.getElementById('commentText');
+    const text = textInput.value.trim();
+    const author = document.getElementById('commentAuthor').value;
+
+    if (!text) return;
+
+    const now = new Date();
+    const timeStr = `${now.toLocaleDateString('en-US', {month:'short', day:'numeric'})}, ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    comments.push({ id: Date.now(), author, text, time: timeStr });
+    localStorage.setItem('ipa26_board_comments', JSON.stringify(comments));
+    textInput.value = '';
+    renderComments();
+  }
+
+  function saveAndRefresh() {
+    localStorage.setItem('ipa26_board_tasks', JSON.stringify(tasks));
+    renderOverview();
+    renderBoard();
+  }
+
+  init();
+</script>
+
+</body>
+</html>
